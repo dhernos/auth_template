@@ -106,7 +106,7 @@ export default function AdminSessionsPage() {
                 <td className="py-2 px-4 border-b text-center">
                     <button
                     onClick={() => handleDeleteSession(s.sessionId)}
-                    className="bg-red-500 text-white px-3 py-1 rounded-md text-xs hover:bg-red-600 transition-colors"
+                    className="bg-red-500 text-white px-3 py-1 rounded-md text-xs hover:bg-red-600 transition-colors cursor-pointer"
                     >
                     Logout
                     </button>

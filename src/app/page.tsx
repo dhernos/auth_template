@@ -96,7 +96,7 @@ export default function Home() {
             <button
               onClick={fetchSessionDetails}
               disabled={loadingSessionInfo}
-              className="rounded-md bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600 disabled:opacity-50"
+              className="rounded-md bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600 disabled:opacity-50 cursor-pointer"
             >
               {loadingSessionInfo ? "Lade..." : "Details der Redis-Session anzeigen"}
             </button>
@@ -118,7 +118,7 @@ export default function Home() {
 
           <button
             onClick={handleSignOut}
-            className="mt-6 rounded-md bg-red-500 px-6 py-3 font-bold text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+            className="mt-6 rounded-md bg-red-500 px-6 py-3 font-bold text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 cursor-pointer"
           >
             Abmelden
           </button>
@@ -128,13 +128,13 @@ export default function Home() {
           <p className="mb-4 text-lg">Sie sind nicht angemeldet.</p>
           <Link
             href="/login"
-            className="rounded-md bg-blue-500 px-6 py-3 font-bold text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+            className="rounded-md bg-blue-500 px-6 py-3 font-bold text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 cursor-pointer"
           >
             Anmelden
           </Link>
           <Link
             href="/signup"
-            className="ml-4 rounded-md bg-purple-500 px-6 py-3 font-bold text-white hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
+            className="ml-4 rounded-md bg-purple-500 px-6 py-3 font-bold text-white hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 cursor-pointer"
           >
             Registrieren
           </Link>
