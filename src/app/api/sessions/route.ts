@@ -47,7 +47,6 @@ const getSessionsHandler = async (req: Request, session: any) => {
 };
 
 const deleteSessionHandler = async (req: Request, session: any) => {
-  // Hier prüfen wir erneut, dass es ein Admin ist, für zusätzliche Sicherheit.
   if (session.user.role !== "USER") {
     return NextResponse.json({ error: "Access Denied" }, { status: 403 });
   }

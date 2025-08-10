@@ -8,8 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
-import { ForgotPasswordDialog } from "@/components/forgot-password-dialog"; 
-import ThemeToggle from "@/components/theme-toggle";
+import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -55,7 +54,6 @@ export default function LoginPage() {
           <CardDescription>Melde dich bei deinem Konto an</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <ThemeToggle></ThemeToggle>
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label htmlFor="email" className="mb-2 block text-sm font-bold">
