@@ -67,9 +67,13 @@ export default function SignUpPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess("Registrierung erfolgreich! Du kannst dich jetzt anmelden.");
+        // Erfolgsmeldung für den Benutzer anzeigen
+        setSuccess("Registrierung erfolgreich! Bitte überprüfe deine E-Mails, um deinen Account zu verifizieren.");
+        
+        // NEUE WEITERLEITUNG: Leite zur Verifizierungsseite weiter und übergebe die E-Mail
+        // als Query-Parameter, damit die Verifizierungsseite weiß, welche E-Mail verifiziert werden muss.
         setTimeout(() => {
-          router.push("/login?signupSuccess=true");
+          router.push(`/verify-email?email=${encodeURIComponent(email)}`);
         }, 2000);
       } else {
         setError(data.message || "Registrierung fehlgeschlagen. Bitte versuche es erneut.");

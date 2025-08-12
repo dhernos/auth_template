@@ -1,3 +1,5 @@
+// src/app/(auth)/login/page.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -22,12 +24,18 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Zustand für den Dialog
   const [isForgotPasswordDialogOpen, setIsForgotPasswordDialogOpen] = useState(false);
+  
+  const signupSuccess = searchParams.get("signupSuccess");
+  const verificationSuccess = searchParams.get("verificationSuccess");
+  const initialMessage = signupSuccess ? "Registrierung erfolgreich! Bitte verifiziere deine E-Mail." : 
+                        verificationSuccess ? "E-Mail verifiziert! Du kannst dich jetzt anmelden." : null;
+  const [successMessage, setSuccessMessage] = useState<string | null>(initialMessage);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
     setLoading(true);
 
     const result = await signIn("credentials", {
@@ -38,8 +46,24 @@ export default function LoginPage() {
     });
 
     if (result?.error) {
-      setError("E-Mail oder Passwort ist falsch.");
-      console.error("Login fehlgeschlagen:", result.error);
+      if (result.error === "EMAIL_NOT_VERIFIED") {
+        // NEUE LOGIK: Weiterleitung zur Verifizierungsseite bei diesem spezifischen Fehler
+        console.warn("Anmeldeversuch mit nicht verifizierter E-Mail. Leite zur Verifizierungsseite weiter.");
+        try {
+          const response = await fetch("api/resend-verification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: email }),
+          });
+        } catch (err) {
+          throw new Error("Fehler beim Senden des neuen Codes. Bitte versuche es später erneut.");
+        }
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+      } else {
+        // Bei allen anderen Fehlern (z.B. falsche Anmeldeinformationen)
+        setError("E-Mail oder Passwort ist falsch.");
+        console.error("Login fehlgeschlagen:", result.error);
+      }
     } else if (result?.ok) {
       router.push(callbackUrl);
     }
@@ -56,9 +80,7 @@ export default function LoginPage() {
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <label htmlFor="email" className="mb-2 block text-sm font-bold">
-                E-Mail:
-              </label>
+              <label htmlFor="email" className="mb-2 block text-sm font-bold">E-Mail:</label>
               <Input
                 id="email"
                 type="email"
@@ -72,9 +94,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="mb-6">
-              <label htmlFor="password" className="mb-2 block text-sm font-bold">
-                Passwort:
-              </label>
+              <label htmlFor="password" className="mb-2 block text-sm font-bold">Passwort:</label>
               <div className="relative">
                 <Input
                   id="password"
@@ -113,7 +133,6 @@ export default function LoginPage() {
                   Angemeldet bleiben
                 </label>
               </div>
-              {/* Ändere den Link-Handler */}
               <button
                 type="button"
                 onClick={() => setIsForgotPasswordDialogOpen(true)}
@@ -124,6 +143,7 @@ export default function LoginPage() {
             </div>
             
             {error && <p className="mb-4 text-center text-red-500">{error}</p>}
+            {successMessage && <p className="mb-4 text-center text-green-600">{successMessage}</p>}
             
             <Button
               type="submit"
@@ -142,7 +162,6 @@ export default function LoginPage() {
         </CardContent>
       </Card>
       
-      {/* Füge die neue Dialog-Komponente hinzu */}
       <ForgotPasswordDialog
         isOpen={isForgotPasswordDialogOpen}
         onClose={() => setIsForgotPasswordDialogOpen(false)}
