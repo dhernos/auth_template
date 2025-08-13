@@ -9,6 +9,7 @@ import type { Adapter } from "next-auth/adapters";
 import type { JWT } from "next-auth/jwt";
 import { randomUUID } from "crypto";
 import redis from "@/lib/redis";
+import { headers } from "next/headers";
 
 const prisma = new PrismaClient();
 
@@ -22,6 +23,9 @@ async function checkSessionInRedis(sessionId: string) {
 async function invalidateSession(sessionId: string) {
   await redis.del(`session:${sessionId}`);
 }
+
+const LOGIN_ATTEMPT_LIMIT = 3;
+const LOGIN_BAN_DURATION_SECONDS = 60 * 60; // 1 Stunde
 
 export const authOptions = {
   adapter: PrismaAdapter(prisma) as Adapter,
@@ -38,29 +42,55 @@ export const authOptions = {
           throw new Error("Bitte geben Sie E-Mail und Passwort an.");
         }
 
+        // Korrekter Weg, um die IP-Adresse und den User-Agent direkt im async-Callback zu holen
+        const userAgent = (await headers()).get("user-agent") || "unknown";
+        const forwardedFor = (await headers()).get("x-forwarded-for");
+        const ip = forwardedFor ? forwardedFor.split(",")[0].trim() : (await headers()).get("x-real-ip");
+
+        if (!ip) {
+            throw new Error("IP-Adresse konnte nicht ermittelt werden.");
+        }
+        
+        const banKey = `login_ban:${ip}`;
+        const loginAttemptsKey = `login_attempts:${ip}`;
+
+        // 1. IP-Sperre überprüfen
+        const isBanned = await redis.exists(banKey);
+        if (isBanned) {
+            console.warn(`Anmeldeversuch von gesperrter IP: ${ip}`);
+            throw new Error("IP_BANNED"); 
+        }
+
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
 
-        if (!user || !user.password) {
-          throw new Error("Ungültige Anmeldeinformationen.");
+        // Prüfung auf ungültige Anmeldedaten
+        if (!user || !user.password || !(await bcrypt.compare(credentials.password, user.password))) {
+            const attempts = await redis.incr(loginAttemptsKey);
+            if (attempts >= LOGIN_ATTEMPT_LIMIT) {
+                console.warn(`IP ${ip} hat ${LOGIN_ATTEMPT_LIMIT} fehlgeschlagene Versuche. Sperre für 1 Stunde.`);
+                await redis.setex(banKey, LOGIN_BAN_DURATION_SECONDS, "1");
+                await redis.expire(loginAttemptsKey, LOGIN_BAN_DURATION_SECONDS); 
+                throw new Error("IP_BANNED");
+            }
+            if (attempts === 1) {
+                await redis.expire(loginAttemptsKey, 10 * 60); // Timeout nach 10 Minuten ohne weitere Versuche
+            }
+            throw new Error("Ungültige Anmeldeinformationen.");
         }
 
-        const isValidPassword = await bcrypt.compare(credentials.password, user.password);
-
-        if (!isValidPassword) {
-          throw new Error("Ungültige Anmeldeinformationen.");
-        }
+        // Bei erfolgreichem Login: Zähler für die IP zurücksetzen
+        await redis.del(loginAttemptsKey); 
 
         if (!user.emailVerified) {
           console.error("Login fehlgeschlagen: E-Mail ist nicht verifiziert.");
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
-        //Session in Redis erstellen
         const sessionId = randomUUID();
         const now = Date.now();
-        const maxAgeInSeconds = credentials.rememberMe === "true" ? 7 * 24 * 60 * 60 : 7 * 60 * 60;
+        const maxAgeInSeconds = credentials.rememberMe === "true" ? 30 * 24 * 60 * 60 : 7 * 60 * 60;
         const sessionExpiresAt = now + maxAgeInSeconds * 1000;
 
         await redis.hmset(`session:${sessionId}`, {
@@ -68,6 +98,8 @@ export const authOptions = {
           expires: sessionExpiresAt.toString(),
           loginTime: now.toString(),
           role: user.role,
+          ipAddress: ip, // Hinzufügen der IP-Adresse
+          userAgent: userAgent, // Hinzufügen des User-Agents
         });
 
         await redis.expire(`session:${sessionId}`, maxAgeInSeconds);
@@ -89,7 +121,6 @@ export const authOptions = {
   },
   callbacks: {
     async jwt({ token, user, trigger, session }) {
-      // Wenn der JWT-Callback bereits einen Fehler erkannt hat, geben wir ihn zurück.
       if (token.error) {
         return token;
       }

@@ -12,12 +12,6 @@ async function getAllSessionKeys() {
 }
 
 const getSessionsHandler = async (req: Request, session: any) => {
-  // Der Wrapper hat bereits die Session-Gültigkeit geprüft.
-  // Wir müssen nur noch sicherstellen, dass der Benutzer die richtige Rolle hat.
-  if (session.user.role !== "USER") {
-    return NextResponse.json({ error: "Access Denied" }, { status: 403 });
-  }
-
   try {
     const keys = await getAllSessionKeys();
     const sessions = await Promise.all(
@@ -47,10 +41,6 @@ const getSessionsHandler = async (req: Request, session: any) => {
 };
 
 const deleteSessionHandler = async (req: Request, session: any) => {
-  if (session.user.role !== "USER") {
-    return NextResponse.json({ error: "Access Denied" }, { status: 403 });
-  }
-
   const { sessionId } = await req.json();
 
   if (!sessionId) {

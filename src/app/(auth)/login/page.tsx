@@ -46,8 +46,11 @@ export default function LoginPage() {
     });
 
     if (result?.error) {
-      if (result.error === "EMAIL_NOT_VERIFIED") {
-        // NEUE LOGIK: Weiterleitung zur Verifizierungsseite bei diesem spezifischen Fehler
+      // NEUE LOGIK: Bei IP-Sperre eine allgemeine Meldung anzeigen
+      if (result.error === "IP_BANNED") {
+        setError("Zu viele fehlgeschlagene Anmeldeversuche. Bitte versuchen Sie es später erneut.");
+        console.warn("Anmeldeversuch von gesperrter IP.");
+      } else if (result.error === "EMAIL_NOT_VERIFIED") {
         console.warn("Anmeldeversuch mit nicht verifizierter E-Mail. Leite zur Verifizierungsseite weiter.");
         try {
           const response = await fetch("api/resend-verification", {
@@ -55,12 +58,16 @@ export default function LoginPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: email }),
           });
+          const data = await response.json();
+          if (response.ok) {
+            router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+          } else {
+            setError(data.message || "Fehler beim Senden des neuen Codes. Bitte versuche es später erneut.");
+          }
         } catch (err) {
-          throw new Error("Fehler beim Senden des neuen Codes. Bitte versuche es später erneut.");
+          setError("Fehler beim Senden des neuen Codes. Bitte versuche es später erneut.");
         }
-        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
       } else {
-        // Bei allen anderen Fehlern (z.B. falsche Anmeldeinformationen)
         setError("E-Mail oder Passwort ist falsch.");
         console.error("Login fehlgeschlagen:", result.error);
       }

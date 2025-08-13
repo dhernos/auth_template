@@ -14,6 +14,8 @@ interface SessionData {
   loginTime: string;
   role: string;
   ttlInSeconds: number;
+  ipAddress: string;
+  userAgent: string;
 }
 
 export default function AdminSessionsPage() {
@@ -24,10 +26,17 @@ export default function AdminSessionsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === "authenticated" && session?.user?.role === "USER") {
+    // Wenn der Status 'loading' ist, warten wir einfach
+    if (status === "loading") {
+      return;
+    }
+    
+    // Prüfen, ob der Benutzer authentifiziert und ein Admin ist
+    if (status === "authenticated") {
       fetchSessions();
-    } else if (status === "unauthenticated") {
-      router.push("/login");
+    } else {
+      // Wenn nicht, wird der Ladevorgang beendet, aber die Seite nicht gerendert
+      setLoading(false);
     }
   }, [status, router, session?.user?.role]);
 
@@ -65,11 +74,17 @@ export default function AdminSessionsPage() {
     }
   };
 
+  // Wenn NextAuth noch lädt oder wir auf Daten vom Server warten
   if (status === "loading" || loading) {
     return <div className="p-8">Loading sessions...</div>;
   }
 
-  if (status !== "authenticated" || session?.user.role !== "USER") {
+  // Zugriff verweigern, wenn der Benutzer nicht authentifiziert oder kein USER ist
+  if (status !== "authenticated") {
+    // Weiterleiten, falls unauthentifiziert, sonst "Access Denied" anzeigen
+    if (status === "unauthenticated") {
+        router.push("/login");
+    }
     return <div className="p-8">Access Denied.</div>;
   }
   
@@ -77,45 +92,49 @@ export default function AdminSessionsPage() {
     return <div className="p-8 text-red-500">Error: {error}</div>;
   }
 
-    return (
+  return (
     <div className="p-8">
-        <h1 className="text-2xl font-bold mb-4">Active Sessions</h1>
-        <p className="mb-4">This page displays all active sessions stored in Redis.</p>
-        <div className="overflow-x-auto">
+      <h1 className="text-2xl font-bold mb-4">Active Sessions</h1>
+      <p className="mb-4">This page displays all active sessions stored in Redis.</p>
+      <div className="overflow-x-auto">
         <table className="min-w-full border">
-            <thead>
+          <thead>
             <tr>
-                <th className="py-2 px-4 border-b">Session ID</th>
-                <th className="py-2 px-4 border-b">User ID</th>
-                <th className="py-2 px-4 border-b">Role</th>
-                <th className="py-2 px-4 border-b">Login Time</th>
-                <th className="py-2 px-4 border-b">Expires At</th>
-                <th className="py-2 px-4 border-b">Time Left (s)</th>
-                <th className="py-2 px-4 border-b">Actions</th>
+              <th className="py-2 px-4 border-b">Session ID</th>
+              <th className="py-2 px-4 border-b">User ID</th>
+              <th className="py-2 px-4 border-b">Role</th>
+              <th className="py-2 px-4 border-b">Login Time</th>
+              <th className="py-2 px-4 border-b">Expires At</th>
+              <th className="py-2 px-4 border-b">Time Left (s)</th>
+              <th className="py-2 px-4 border-b">IP Address</th>
+              <th className="py-2 px-4 border-b">User Agent</th>
+              <th className="py-2 px-4 border-b">Actions</th>
             </tr>
-            </thead>
-            <tbody>
+          </thead>
+          <tbody>
             {sessions.map((s) => (
-                <tr key={s.sessionId}>
+              <tr key={s.sessionId}>
                 <td className="py-2 px-4 border-b text-sm break-all">{s.sessionId}</td>
                 <td className="py-2 px-4 border-b text-sm break-all">{s.userId}</td>
                 <td className="py-2 px-4 border-b text-sm">{s.role}</td>
                 <td className="py-2 px-4 border-b text-sm">{new Date(parseInt(s.loginTime)).toLocaleString()}</td>
                 <td className="py-2 px-4 border-b text-sm">{new Date(parseInt(s.expires)).toLocaleString()}</td>
                 <td className="py-2 px-4 border-b text-sm"><SessionTTL ttlInSeconds={s.ttlInSeconds} /></td>
+                <td className="py-2 px-4 border-b text-sm">{s.ipAddress}</td>
+                <td className="py-2 px-4 border-b text-sm break-all">{s.userAgent}</td>
                 <td className="py-2 px-4 border-b text-center">
-                    <button
+                  <button
                     onClick={() => handleDeleteSession(s.sessionId)}
                     className="bg-red-500 text-white px-3 py-1 rounded-md text-xs hover:bg-red-600 transition-colors cursor-pointer"
-                    >
+                  >
                     Logout
-                    </button>
+                  </button>
                 </td>
-                </tr>
+              </tr>
             ))}
-            </tbody>
+          </tbody>
         </table>
-        </div>
+      </div>
     </div>
-    );
+  );
 }

@@ -86,15 +86,6 @@ model Authenticator {
   @@id([userId, credentialID])
 }
 
-model RateLimit {
-  id        String   @id @default(cuid())
-  identifier String
-  timestamp DateTime
-  count     Int      @default(1)
-
-  @@index([identifier, timestamp])
-}
-
 model Noten {
   id        String @id @default(cuid()) // Unique ID for the grade itself
   note      Int

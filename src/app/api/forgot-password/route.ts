@@ -1,83 +1,79 @@
 // src/app/api/forgot-password/route.ts
+
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import nodemailer from "nodemailer";
+import { sendPasswordResetEmail } from "@/lib/send-password-reset-email";
+import Redis from "ioredis";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+const REDIS_COOLDOWN_SECONDS = 60; // 1 Minute Cooldown pro E-Mail-Anfrage
 
-// Konfiguration des E-Mail-Transporters
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_SERVER_HOST,
-  port: parseInt(process.env.EMAIL_SERVER_PORT || "587"),
-  secure: process.env.EMAIL_SERVER_SECURE === "true", // true für Port 465, false für andere Ports
-  auth: {
-    user: process.env.EMAIL_SERVER_USER,
-    pass: process.env.EMAIL_SERVER_PASSWORD,
-  },
-});
+// Verbindung zu Redis herstellen
+const redis = new Redis(process.env.REDIS_URL as string);
+
+const generatePasswordResetToken = async () => {
+    // Generiere einen sicheren, zufälligen Token
+    const token = crypto.randomBytes(32).toString('hex');
+    // Hashe den Token, bevor er in der Datenbank gespeichert wird, um ihn vor Brute-Force-Angriffen zu schützen
+    const hashedToken = await bcrypt.hash(token, 10);
+    return { token, hashedToken };
+};
 
 export async function POST(req: Request) {
-  try {
-    const { email } = await req.json();
+    try {
+        const { email } = await req.json();
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
+        if (!email) {
+            return NextResponse.json({ message: "E-Mail ist erforderlich." }, { status: 400 });
+        }
 
-    if (!user) {
-      // Sende eine generische Antwort, um nicht zu verraten, ob die E-Mail existiert
-      return NextResponse.json(
-        {
-          message:
-            "Falls eine E-Mail-Adresse mit uns verknüpft ist, haben wir einen Link zum Zurücksetzen des Passworts gesendet.",
-        },
-        { status: 200 }
-      );
+        const cooldownKey = `forgot_password_cooldown:${email}`;
+        
+        // Cooldown-Check in Redis
+        const remainingTime = await redis.ttl(cooldownKey);
+        if (remainingTime > 0) {
+            console.warn(`Rate-Limit überschritten für Passwort-Anfrage von E-Mail: ${email}`);
+            return NextResponse.json(
+                { cooldown: remainingTime, message: `Bitte warte ${remainingTime} Sekunden, bevor du eine neue Anfrage stellst.`},
+                { status: 429 } // Too Many Requests
+            );
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        // Um das Ausnutzen der API zu verhindern, geben wir auch bei nicht gefundenem Benutzer 
+        // eine Erfolgsmeldung aus und setzen das Cooldown.
+        if (!user) {
+            console.warn(`Passwort-Anfrage für nicht existierende E-Mail: ${email}`);
+            await redis.setex(cooldownKey, REDIS_COOLDOWN_SECONDS, "1");
+            return NextResponse.json({ message: "Wenn die E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts gesendet." }, { status: 200 });
+        }
+
+        const { token, hashedToken } = await generatePasswordResetToken();
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 1); // Token ist 1 Stunde gültig
+
+        // Token und Ablaufdatum in der Datenbank speichern
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                passwordResetToken: hashedToken,
+                passwordResetExpires: expiresAt,
+            },
+        });
+
+        // E-Mail senden und Cooldown in Redis setzen
+        await sendPasswordResetEmail(email, token); // Sende den unverschlüsselten Token per E-Mail
+        await redis.setex(cooldownKey, REDIS_COOLDOWN_SECONDS, "1");
+
+        return NextResponse.json({ message: "Wenn die E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts gesendet." }, { status: 200 });
+
+    } catch (error) {
+        console.error("Fehler bei der Passwort-Anfrage:", error);
+        return NextResponse.json({ message: "Interner Serverfehler." }, { status: 500 });
     }
-
-    // Erstelle einen eindeutigen Token mit einer Ablaufzeit von 1 Stunde
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    const passwordResetToken = await bcrypt.hash(resetToken, 10);
-    const passwordResetExpires = new Date(Date.now() + 3600000); // 1 Stunde
-    console.log("Aktuelles Datum +1h:", new Date(Date.now() + 3600000));
-    // Speichere den gehashten Token im Benutzerdatensatz
-    await prisma.user.update({
-      where: { email },
-      data: {
-        passwordResetToken,
-        passwordResetExpires,
-      },
-    });
-
-    const resetUrl = `${process.env.NEXTAUTH_URL}/reset-password?token=${resetToken}`;
-
-    // Sende die E-Mail
-    const mailOptions = {
-      from: process.env.EMAIL_FROM,
-      to: user.email,
-      subject: "Passwort zurücksetzen",
-      html: `
-        <p>Hallo,</p>
-        <p>Du hast angefordert, dein Passwort zurückzusetzen. Klicke auf den folgenden Link, um dies zu tun:</p>
-        <p><a href="${resetUrl}">Passwort zurücksetzen</a></p>
-        <p>Dieser Link ist eine Stunde lang gültig.</p>
-        <p>Falls du dies nicht angefordert hast, ignoriere diese E-Mail.</p>
-      `,
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    return NextResponse.json(
-      {
-        message:
-          "Falls eine E-Mail-Adresse mit uns verknüpft ist, haben wir einen Link zum Zurücksetzen des Passworts gesendet.",
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Fehler beim Senden der Passwort-Reset-E-Mail:", error);
-    return NextResponse.json({ message: "Interner Serverfehler." }, { status: 500 });
-  }
 }

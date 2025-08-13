@@ -1,6 +1,8 @@
+// src/components/forgot-password-dialog.tsx
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -16,33 +18,51 @@ export function ForgotPasswordDialog({ isOpen, onClose }: ForgotPasswordDialogPr
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (cooldown > 0) return;
+    
     setMessage(null);
     setError(null);
     setLoading(true);
 
-    const response = await fetch("/api/forgot-password", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email }),
-    });
+    try {
+      const response = await fetch("/api/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (response.ok) {
-      setMessage(data.message);
-      // Optional: Schließe das Pop-up nach einer erfolgreichen Anfrage
-      // setTimeout(() => onClose(), 3000);
-    } else {
-      setError(data.message);
+      if (response.ok) {
+        setMessage(data.message);
+        setCooldown(60); // Cooldown starten
+      } else if (response.status === 429) {
+        setCooldown(data.cooldown);
+        setError(data.message);
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError("Ein unerwarteter Fehler ist aufgetreten.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setInterval(() => {
+        setCooldown((prev) => prev - 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [cooldown]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -66,7 +86,7 @@ export function ForgotPasswordDialog({ isOpen, onClose }: ForgotPasswordDialogPr
                 onChange={(e) => setEmail(e.target.value)}
                 className="col-span-3"
                 required
-                disabled={loading}
+                disabled={loading || cooldown > 0}
               />
             </div>
           </div>
@@ -76,8 +96,12 @@ export function ForgotPasswordDialog({ isOpen, onClose }: ForgotPasswordDialogPr
             <Button variant="outline" onClick={onClose} disabled={loading} type="button">
               Abbrechen
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Senden..." : "Senden"}
+            <Button type="submit" disabled={loading || cooldown > 0}>
+              {loading
+                ? "Senden..."
+                : cooldown > 0
+                ? `Erneut versuchen in ${cooldown}s`
+                : "Senden"}
             </Button>
           </DialogFooter>
         </form>
