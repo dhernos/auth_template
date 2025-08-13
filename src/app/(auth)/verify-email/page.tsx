@@ -27,7 +27,7 @@ export default function VerifyEmailPage() {
     setLoading(true);
 
     if (!verificationCode || verificationCode.length !== 6) {
-      setError("Bitte gib einen 6-stelligen Code ein.");
+      setError("Please enter a 6-digit code.");
       setLoading(false);
       return;
     }
@@ -42,15 +42,15 @@ export default function VerifyEmailPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess("E-Mail erfolgreich verifiziert! Du wirst weitergeleitet...");
+        setSuccess("Email successfully verified! You will be redirected...");
         setTimeout(() => {
           router.push("/login?verificationSuccess=true");
         }, 2000);
       } else {
-        setError(data.message || "Verifizierung fehlgeschlagen. Bitte versuche es erneut.");
+        setError(data.message || "Verification failed. Please try again.");
       }
     } catch (err) {
-      setError("Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut.");
+      setError("An unexpected error occurred. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -91,16 +91,16 @@ export default function VerifyEmailPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess("Neuer Verifizierungscode wurde gesendet. Bitte überprüfe dein Postfach.");
+        setSuccess("A new verification code has been sent. Please check your inbox.");
         // Start the client-side countdown
         setCooldown(60);
       }else if (response.status === 429){
         setCooldown(data.cooldown); 
       } else {
-        setError(data.message || "Senden des neuen Codes fehlgeschlagen.");
+        setError(data.message || "Sending the new code failed.");
       }
     } catch (err) {
-      setError("Fehler beim Senden des neuen Codes. Bitte versuche es später erneut.");
+      setError("Error sending the new code. Please try again later.");
     } finally {
       setResendLoading(false);
     }
@@ -120,16 +120,16 @@ export default function VerifyEmailPage() {
     <div className="flex min-h-screen items-center justify-center">
       <Card className="w-full max-w-md mx-auto p-4 space-y-4 shadow-lg rounded-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">E-Mail verifizieren</CardTitle>
+          <CardTitle className="text-2xl font-bold">Verify Email</CardTitle>
           <CardDescription>
-            Bitte gib den 6-stelligen Code ein, den wir an deine E-Mail-Adresse <b>{email}</b> gesendet haben.
+            Please enter the 6-digit code we sent to your email address <b>{email}</b>.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label htmlFor="code" className="mb-2 block text-sm font-bold">
-                Verifizierungscode:
+                Verification Code:
               </label>
               <Input
                 id="code"
@@ -153,11 +153,11 @@ export default function VerifyEmailPage() {
               className="w-full cursor-pointer"
               disabled={loading || code.length !== 6}
             >
-              {loading ? "Verifizieren..." : "Account verifizieren"}
+              {loading ? "Verifying..." : "Verify Account"}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm">
-            Keinen Code erhalten?{" "}
+            Didn't receive a code?{" "}
             <Button
               variant="link"
               onClick={handleResend}
@@ -165,15 +165,15 @@ export default function VerifyEmailPage() {
               className="text-blue-600 hover:text-blue-500 cursor-pointer"
             >
               {resendLoading
-                ? "Sende erneut..."
+                ? "Resending..."
                 : cooldown > 0
-                ? `Erneut senden in ${cooldown}s`
-                : "Code erneut senden"}
+                ? `Resend in ${cooldown}s`
+                : "Resend Code"}
             </Button>
           </p>
           <p className="mt-2 text-center text-sm">
             <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-              Zurück zur Registrierung
+              Back to Registration
             </Link>
           </p>
         </CardContent>

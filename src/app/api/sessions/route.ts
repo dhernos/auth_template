@@ -1,13 +1,13 @@
 // src/app/api/sessions/route.ts
 
 import { NextResponse } from "next/server";
-import { protectedRoute } from "@/lib/protected-api"; // Importiere den Wrapper
+import { protectedRoute } from "@/lib/protected-api"; // Import the wrapper
 import redis from "@/lib/redis";
 
-// Funktion, um alle Session-Schlüssel zu finden
+// Function to find all session keys
 async function getAllSessionKeys() {
-  // Redis KEYS ist für große Datenbanken langsam, aber für Debug-Zwecke ok.
-  // In einer Produktionseumgebung sollte SCAN verwendet werden.
+  // Redis KEYS is slow for large databases, but okay for debugging purposes.
+  // In a production environment, SCAN should be used.
   return redis.keys("session:*");
 }
 

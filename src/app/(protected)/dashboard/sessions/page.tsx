@@ -18,7 +18,7 @@ interface SessionData {
   userAgent: string;
 }
 
-export default function AdminSessionsPage() {
+export default function SessionsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [sessions, setSessions] = useState<SessionData[]>([]);
@@ -26,16 +26,16 @@ export default function AdminSessionsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Wenn der Status 'loading' ist, warten wir einfach
+    // If the status is 'loading', we just wait
     if (status === "loading") {
       return;
     }
     
-    // Prüfen, ob der Benutzer authentifiziert und ein Admin ist
+    // Check if the user is authenticated and is an admin
     if (status === "authenticated") {
       fetchSessions();
     } else {
-      // Wenn nicht, wird der Ladevorgang beendet, aber die Seite nicht gerendert
+      // If not, the loading process is stopped, but the page is not rendered
       setLoading(false);
     }
   }, [status, router, session?.user?.role]);
@@ -67,21 +67,21 @@ export default function AdminSessionsPage() {
         if (!res.ok) {
           throw new Error("Failed to delete session");
         }
-        fetchSessions(); // Sessions nach dem Löschen neu laden
+        fetchSessions(); // Reload sessions after deletion
       } catch (err: any) {
         setError(err.message);
       }
     }
   };
 
-  // Wenn NextAuth noch lädt oder wir auf Daten vom Server warten
+  // If NextAuth is still loading or we are waiting for data from the server
   if (status === "loading" || loading) {
     return <div className="p-8">Loading sessions...</div>;
   }
 
-  // Zugriff verweigern, wenn der Benutzer nicht authentifiziert oder kein USER ist
+  // Deny access if the user is not authenticated
   if (status !== "authenticated") {
-    // Weiterleiten, falls unauthentifiziert, sonst "Access Denied" anzeigen
+    // Redirect if unauthenticated, otherwise display "Access Denied"
     if (status === "unauthenticated") {
         router.push("/login");
     }

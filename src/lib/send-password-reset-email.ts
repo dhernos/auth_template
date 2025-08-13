@@ -2,7 +2,7 @@
 
 import nodemailer from "nodemailer";
 
-// Konfiguration des Transporters mit den Umgebungsvariablen
+// Configure the transporter with environment variables
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_SERVER_HOST,
     port: parseInt(process.env.EMAIL_SERVER_PORT || '587'),
@@ -18,20 +18,20 @@ export const sendPasswordResetEmail = async (email: string, token: string) => {
     const mailOptions = {
         from: process.env.EMAIL_FROM,
         to: email,
-        subject: "Passwort zurücksetzen",
-        html: `<p>Hallo,</p>
-               <p>Du hast eine Anfrage zum Zurücksetzen deines Passworts gestellt.</p>
-               <p>Klicke auf den folgenden Link, um dein Passwort zurückzusetzen:</p>
-               <a href="${resetLink}">Passwort zurücksetzen</a>
-               <p>Dieser Link ist eine Stunde lang gültig.</p>
-               <p>Wenn du diese Anfrage nicht gestellt hast, ignoriere diese E-Mail bitte.</p>`,
+        subject: "Password Reset",
+        html: `<p>Hello,</p>
+               <p>You have requested a password reset.</p>
+               <p>Click the following link to reset your password:</p>
+               <a href="${resetLink}">Reset Password</a>
+               <p>This link is valid for one hour.</p>
+               <p>If you did not request this, please ignore this email.</p>`,
     };
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`Passwort-Reset-E-Mail gesendet an ${email}`);
+        console.log(`Password reset email sent to ${email}`);
     } catch (error) {
-        console.error("Fehler beim Senden der Passwort-Reset-E-Mail:", error);
-        throw new Error("E-Mail konnte nicht gesendet werden.");
+        console.error("Error sending password reset email:", error);
+        throw new Error("Could not send email.");
     }
 };

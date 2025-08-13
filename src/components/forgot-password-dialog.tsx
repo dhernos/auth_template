@@ -41,7 +41,7 @@ export function ForgotPasswordDialog({ isOpen, onClose }: ForgotPasswordDialogPr
 
       if (response.ok) {
         setMessage(data.message);
-        setCooldown(60); // Cooldown starten
+        setCooldown(60); // Start cooldown
       } else if (response.status === 429) {
         setCooldown(data.cooldown);
         setError(data.message);
@@ -49,7 +49,7 @@ export function ForgotPasswordDialog({ isOpen, onClose }: ForgotPasswordDialogPr
         setError(data.message);
       }
     } catch (err) {
-      setError("Ein unerwarteter Fehler ist aufgetreten.");
+      setError("An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
@@ -68,16 +68,16 @@ export function ForgotPasswordDialog({ isOpen, onClose }: ForgotPasswordDialogPr
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Passwort vergessen?</DialogTitle>
+          <DialogTitle>Forgot Password?</DialogTitle>
           <DialogDescription>
-            Gib deine E-Mail-Adresse ein, um einen Link zum Zurücksetzen deines Passworts zu erhalten.
+            Enter your email address to receive a link to reset your password.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="email" className="text-right">
-                E-Mail
+                Email
               </Label>
               <Input
                 id="email"
@@ -94,14 +94,14 @@ export function ForgotPasswordDialog({ isOpen, onClose }: ForgotPasswordDialogPr
           {error && <p className="text-center text-red-500">{error}</p>}
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading} type="button">
-              Abbrechen
+              Cancel
             </Button>
             <Button type="submit" disabled={loading || cooldown > 0}>
               {loading
-                ? "Senden..."
+                ? "Sending..."
                 : cooldown > 0
-                ? `Erneut versuchen in ${cooldown}s`
-                : "Senden"}
+                ? `Try again in ${cooldown}s`
+                : "Send"}
             </Button>
           </DialogFooter>
         </form>

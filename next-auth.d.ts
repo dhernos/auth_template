@@ -5,7 +5,7 @@ import { JWT as NextAuthJWT } from "next-auth/jwt";
 
 declare module "next-auth" {
   /**
-   * Erweitert die Standard-Session-Schnittstelle.
+   * Extends the default Session interface.
    */
   interface Session {
     user: {
@@ -16,8 +16,8 @@ declare module "next-auth" {
   }
 
   /**
-   * Erweitert die Standard-User-Schnittstelle.
-   * Das `sessionId` ist optional, da es nicht immer existiert (z.B. bei OAuth-Anbietern).
+   * Extends the default User interface.
+   * The `sessionId` is optional because it may not always exist (e.g., with OAuth providers).
    */
   interface User extends DefaultUser {
     id: string;
@@ -28,7 +28,7 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   /**
-   * Erweitert die Standard-JWT-Schnittstelle.
+   * Extends the default JWT interface.
    */
   interface JWT extends NextAuthJWT {
     id: string;

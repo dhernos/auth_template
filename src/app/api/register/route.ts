@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const { name, email, password } = await req.json();
 
     if (!email || !password) {
-      return NextResponse.json({ message: "E-Mail und Passwort sind erforderlich." }, { status: 400 });
+      return NextResponse.json({ message: "Email and password are required." }, { status: 400 });
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -19,9 +19,9 @@ export async function POST(req: NextRequest) {
 
     if (existingUser) {
       if (!existingUser.emailVerified) {
-        return NextResponse.json({ message: "Benutzer existiert bereits. Bitte überprüfe deine E-Mails oder melde dich an, um den Code erneut zu senden." }, { status: 409 });
+        return NextResponse.json({ message: "User already exists. Please check your emails or sign in to resend the code." }, { status: 409 });
       }
-      return NextResponse.json({ message: "Benutzer mit dieser E-Mail existiert bereits." }, { status: 409 });
+      return NextResponse.json({ message: "A user with this email already exists." }, { status: 409 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -42,18 +42,18 @@ export async function POST(req: NextRequest) {
     });
 
     if (!resendResponse.ok) {
-        // Bei einem Fehler der resend-verification API, loggen wir ihn und geben eine Fehlermeldung zurück
-        console.error("Fehler beim Aufruf der resend-verification API:", await resendResponse.text());
-        return NextResponse.json({ message: "Registrierung fehlgeschlagen: Fehler beim Senden des Verifizierungscodes." }, { status: 500 });
+        // In case of an error from the resend-verification API, we log it and return an error message
+        console.error("Error calling the resend-verification API:", await resendResponse.text());
+        return NextResponse.json({ message: "Registration failed: Error sending the verification code." }, { status: 500 });
     }
 
     return NextResponse.json({ 
-      message: "Registrierung erfolgreich! Bitte überprüfe deine E-Mails, um deinen Account zu verifizieren.", 
+      message: "Registration successful! Please check your emails to verify your account.", 
       user: { id: newUser.id, email: newUser.email } 
     }, { status: 201 });
 
   } catch (error) {
-    console.error("Registrierungsfehler:", error);
-    return NextResponse.json({ message: "Interner Serverfehler." }, { status: 500 });
+    console.error("Registration error:", error);
+    return NextResponse.json({ message: "Internal server error." }, { status: 500 });
   }
 }

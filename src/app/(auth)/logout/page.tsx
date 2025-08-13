@@ -8,9 +8,9 @@ export default function LogOut() {
   const router = useRouter();
 
   useEffect(() => {
-    // Rufe signOut mit der redirect-Option auf, um zur Login-Seite zu wechseln
+    // Call signOut with the redirect option to go to the login page
     signOut({ callbackUrl: "/login" });
-  },);
+  }, []);
 
   return (
     <div className="flex items-center justify-center min-h-screen">

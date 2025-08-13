@@ -9,10 +9,10 @@ export async function POST(req: Request) {
     const { token, password } = await req.json();
 
     if (!token || !password) {
-      return NextResponse.json({ message: "Token und Passwort sind erforderlich." }, { status: 400 });
+      return NextResponse.json({ message: "Token and password are required." }, { status: 400 });
     }
 
-    // Holen Sie alle Benutzer mit einem gültigen passwordResetToken
+    // Get all users with a valid passwordResetToken
     const usersWithTokens = await prisma.user.findMany({
       where: {
         passwordResetToken: {
@@ -22,24 +22,24 @@ export async function POST(req: Request) {
     });
 
     let user = null;
-    // Durchlaufen Sie die Benutzer, um den passenden Token zu finden
+    // Iterate through the users to find the matching token
     for (const u of usersWithTokens) {
       if (u.passwordResetToken && await bcrypt.compare(token, u.passwordResetToken)) {
         user = u;
-        break; // Sobald der Benutzer gefunden ist, brechen wir die Schleife ab
+        break; // Once the user is found, we break the loop
       }
     }
 
     if (!user) {
-      return NextResponse.json({ message: "Ungültiger oder abgelaufener Token." }, { status: 400 });
+      return NextResponse.json({ message: "Invalid or expired token." }, { status: 400 });
     }
 
-    // Prüfen Sie manuell das Ablaufdatum
+    // Manually check the expiration date
     if (user.passwordResetExpires && user.passwordResetExpires.getTime() < Date.now()) {
-      return NextResponse.json({ message: "Ungültiger oder abgelaufener Token." }, { status: 400 });
+      return NextResponse.json({ message: "Invalid or expired token." }, { status: 400 });
     }
 
-    // Passwort hashen und aktualisieren
+    // Hash and update the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await prisma.user.update({
@@ -51,9 +51,9 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ message: "Passwort wurde erfolgreich zurückgesetzt." }, { status: 200 });
+    return NextResponse.json({ message: "Password has been reset successfully." }, { status: 200 });
   } catch (error) {
-    console.error("Fehler beim Zurücksetzen des Passworts:", error);
-    return NextResponse.json({ message: "Interner Serverfehler." }, { status: 500 });
+    console.error("Error resetting the password:", error);
+    return NextResponse.json({ message: "Internal server error." }, { status: 500 });
   }
 }

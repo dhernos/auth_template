@@ -5,7 +5,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import LoadingPage from '@/components/loading-page'; // Eine einfache Lade-Komponente
+import LoadingPage from '@/components/loading-page'; // A simple loading component
 
 export default function ProtectedLayout({
   children,
@@ -16,23 +16,23 @@ export default function ProtectedLayout({
   const router = useRouter();
 
   useEffect(() => {
-    // Wenn die Session ungültig wird, leiten wir um
+    // If the session becomes invalid, we redirect
     if (status === "unauthenticated" || session?.error) {
       console.log("ProtectedLayout: Session invalid, redirecting.");
       router.push("/logout");
     }
   }, [status, session?.error, router]);
 
-  // Zeige eine Lade-Seite, solange der Status noch nicht geklärt ist
+  // Show a loading page until the status is determined
   if (status === "loading") {
     return <LoadingPage />;
   }
 
-  // Render die Seite nur, wenn der User authentifiziert ist
+  // Render the page only if the user is authenticated
   if (status === "authenticated") {
     return <>{children}</>;
   }
 
-  // Standard-Fall, falls etwas nicht stimmt (wird selten erreicht)
+  // Default case if something is wrong (should be rarely reached)
   return null;
 }

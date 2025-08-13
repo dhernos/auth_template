@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EyeIcon, EyeOffIcon } from "@/components/ui/eye_icon";
 
-// Diese Funktion bewertet die Stärke eines Passworts
+// This function evaluates the strength of a password
 const validatePassword = (password: string) => {
   let strength = 0;
   if (password.length > 7) strength += 1;
@@ -32,7 +32,7 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Aktualisiert die Passwortstärke, wenn sich das Passwort ändert
+  // Updates the password strength when the password changes
   useEffect(() => {
     setPasswordStrength(validatePassword(password));
   }, [password]);
@@ -44,13 +44,13 @@ export default function SignUpPage() {
     setLoading(true);
 
     if (!name || !email || !password) {
-      setError("Bitte füllen Sie alle Felder aus.");
+      setError("Please fill out all fields.");
       setLoading(false);
       return;
     }
 
     if (passwordStrength < 5) {
-      setError("Das Passwort ist zu schwach. Es muss Großbuchstaben, Kleinbuchstaben, Zahlen und Sonderzeichen enthalten und mindestens 8 Zeichen lang sein.");
+      setError("The password is too weak. It must contain uppercase letters, lowercase letters, numbers, and special characters, and be at least 8 characters long.");
       setLoading(false);
       return;
     }
@@ -67,21 +67,21 @@ export default function SignUpPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // Erfolgsmeldung für den Benutzer anzeigen
-        setSuccess("Registrierung erfolgreich! Bitte überprüfe deine E-Mails, um deinen Account zu verifizieren.");
+        // Display success message to the user
+        setSuccess("Registration successful! Please check your emails to verify your account.");
         
-        // NEUE WEITERLEITUNG: Leite zur Verifizierungsseite weiter und übergebe die E-Mail
-        // als Query-Parameter, damit die Verifizierungsseite weiß, welche E-Mail verifiziert werden muss.
+        // NEW REDIRECTION: Redirect to the verification page and pass the email
+        // as a query parameter so the verification page knows which email to verify.
         setTimeout(() => {
           router.push(`/verify-email?email=${encodeURIComponent(email)}`);
         }, 2000);
       } else {
-        setError(data.message || "Registrierung fehlgeschlagen. Bitte versuche es erneut.");
-        console.error("Registrierung fehlgeschlagen:", data);
+        setError(data.message || "Registration failed. Please try again.");
+        console.error("Registration failed:", data);
       }
     } catch (err) {
-      console.error("Fehler bei der Registrierung:", err);
-      setError("Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut.");
+      console.error("Error during registration:", err);
+      setError("An unexpected error occurred. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -114,8 +114,8 @@ export default function SignUpPage() {
     <div className="flex min-h-screen items-center justify-center">
       <Card className="w-full max-w-md mx-auto p-4 space-y-4 shadow-lg rounded-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Registrieren</CardTitle>
-          <CardDescription>Erstelle dein Konto</CardDescription>
+          <CardTitle className="text-2xl font-bold">Register</CardTitle>
+          <CardDescription>Create your account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit}>
@@ -134,7 +134,7 @@ export default function SignUpPage() {
             </div>
             <div className="mb-4">
               <label htmlFor="email" className="mb-2 block text-sm font-bold">
-                E-Mail:
+                Email:
               </label>
               <Input
                 id="email"
@@ -149,7 +149,7 @@ export default function SignUpPage() {
             </div>
             <div className="mb-6">
               <label htmlFor="password" className="mb-2 block text-sm font-bold">
-                Passwort:
+                Password:
               </label>
               <div className="relative">
                 <Input
@@ -175,12 +175,12 @@ export default function SignUpPage() {
                 </Button>
               </div>
               
-              {/* Passwortstärke-Anzeige */}
+              {/* Password strength indicator */}
               {password.length > 0 && (
                 <div className="w-full mt-2">
                   <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span>Passwortstärke</span>
-                    <span>{passwordStrength === 5 ? "Stark" : "Schwach"}</span>
+                    <span>Password Strength</span>
+                    <span>{passwordStrength === 5 ? "Strong" : "Weak"}</span>
                   </div>
                   <div className="w-full h-2 rounded-full overflow-hidden">
                     <div
@@ -200,13 +200,13 @@ export default function SignUpPage() {
               className="w-full cursor-pointer"
               disabled={loading || !isFormValid}
             >
-              {loading ? "Registrieren..." : "Registrieren"}
+              {loading ? "Registering..." : "Register"}
             </Button>
           </form>
           <p className="mt-6 text-center text-sm">
-            Du hast bereits ein Konto?{" "}
+            Already have an account?{" "}
             <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-              Jetzt anmelden
+              Log in now
             </Link>
           </p>
         </CardContent>

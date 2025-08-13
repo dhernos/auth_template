@@ -1,6 +1,6 @@
 // src/auth.ts
 
-import NextAuth from "next-auth";
+import NextAuth, { type SessionStrategy } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { PrismaClient } from "@prisma/client";
@@ -13,19 +13,19 @@ import { headers } from "next/headers";
 
 const prisma = new PrismaClient();
 
-// Funktion zum Überprüfen der Session in Redis
+// Function to check the session in Redis
 async function checkSessionInRedis(sessionId: string) {
   const session = await redis.hgetall(`session:${sessionId}`);
   return session;
 }
 
-// Funktion zum Löschen der Session aus Redis
+// Function to invalidate the session from Redis
 async function invalidateSession(sessionId: string) {
   await redis.del(`session:${sessionId}`);
 }
 
 const LOGIN_ATTEMPT_LIMIT = 3;
-const LOGIN_BAN_DURATION_SECONDS = 60 * 60; // 1 Stunde
+const LOGIN_BAN_DURATION_SECONDS = 60 * 60; // 1 hour
 
 export const authOptions = {
   adapter: PrismaAdapter(prisma) as Adapter,
@@ -39,25 +39,25 @@ export const authOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Bitte geben Sie E-Mail und Passwort an.");
+          throw new Error("Please provide an email and password.");
         }
 
-        // Korrekter Weg, um die IP-Adresse und den User-Agent direkt im async-Callback zu holen
+        // Correct way to get the IP address and User-Agent directly in the async callback
         const userAgent = (await headers()).get("user-agent") || "unknown";
         const forwardedFor = (await headers()).get("x-forwarded-for");
         const ip = forwardedFor ? forwardedFor.split(",")[0].trim() : (await headers()).get("x-real-ip");
 
         if (!ip) {
-            throw new Error("IP-Adresse konnte nicht ermittelt werden.");
+            throw new Error("Could not determine IP address.");
         }
         
         const banKey = `login_ban:${ip}`;
         const loginAttemptsKey = `login_attempts:${ip}`;
 
-        // 1. IP-Sperre überprüfen
+        // 1. Check for IP ban
         const isBanned = await redis.exists(banKey);
         if (isBanned) {
-            console.warn(`Anmeldeversuch von gesperrter IP: ${ip}`);
+            console.warn(`Login attempt from banned IP: ${ip}`);
             throw new Error("IP_BANNED"); 
         }
 
@@ -65,26 +65,26 @@ export const authOptions = {
           where: { email: credentials.email },
         });
 
-        // Prüfung auf ungültige Anmeldedaten
+        // Check for invalid login credentials
         if (!user || !user.password || !(await bcrypt.compare(credentials.password, user.password))) {
             const attempts = await redis.incr(loginAttemptsKey);
             if (attempts >= LOGIN_ATTEMPT_LIMIT) {
-                console.warn(`IP ${ip} hat ${LOGIN_ATTEMPT_LIMIT} fehlgeschlagene Versuche. Sperre für 1 Stunde.`);
+                console.warn(`IP ${ip} has ${LOGIN_ATTEMPT_LIMIT} failed attempts. Banning for 1 hour.`);
                 await redis.setex(banKey, LOGIN_BAN_DURATION_SECONDS, "1");
                 await redis.expire(loginAttemptsKey, LOGIN_BAN_DURATION_SECONDS); 
                 throw new Error("IP_BANNED");
             }
             if (attempts === 1) {
-                await redis.expire(loginAttemptsKey, 10 * 60); // Timeout nach 10 Minuten ohne weitere Versuche
+                await redis.expire(loginAttemptsKey, 10 * 60); // Timeout after 10 minutes without further attempts
             }
-            throw new Error("Ungültige Anmeldeinformationen.");
+            throw new Error("Invalid login credentials.");
         }
 
-        // Bei erfolgreichem Login: Zähler für die IP zurücksetzen
+        // On successful login: reset the counter for the IP
         await redis.del(loginAttemptsKey); 
 
         if (!user.emailVerified) {
-          console.error("Login fehlgeschlagen: E-Mail ist nicht verifiziert.");
+          console.error("Login failed: Email is not verified.");
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
@@ -98,8 +98,8 @@ export const authOptions = {
           expires: sessionExpiresAt.toString(),
           loginTime: now.toString(),
           role: user.role,
-          ipAddress: ip, // Hinzufügen der IP-Adresse
-          userAgent: userAgent, // Hinzufügen des User-Agents
+          ipAddress: ip, // Add the IP address
+          userAgent: userAgent, // Add the User-Agent
         });
 
         await redis.expire(`session:${sessionId}`, maxAgeInSeconds);

@@ -1,4 +1,4 @@
-// src/app/api/verify/route.ts
+// src/app/api/verify-email/route.ts
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
@@ -10,23 +10,23 @@ export async function POST(req: Request) {
     const { email, code } = await req.json();
 
     if (!email || !code) {
-      return NextResponse.json({ message: "E-Mail und Code sind erforderlich." }, { status: 400 });
+      return NextResponse.json({ message: "Email and code are required." }, { status: 400 });
     }
 
     const verificationToken = await prisma.verificationToken.findFirst({
       where: {
         token: code,
         user: { email },
-        expires: { gt: new Date() } // Überprüft, ob das Token noch gültig ist
+        expires: { gt: new Date() } // Checks if the token is still valid
       },
       include: { user: true }
     });
 
     if (!verificationToken) {
-      return NextResponse.json({ message: "Ungültiger oder abgelaufener Code." }, { status: 400 });
+      return NextResponse.json({ message: "Invalid or expired code." }, { status: 400 });
     }
 
-    // Benutzer als verifiziert markieren und Token löschen
+    // Mark user as verified and delete the token
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: verificationToken.userId },
@@ -37,9 +37,9 @@ export async function POST(req: Request) {
       });
     });
 
-    return NextResponse.json({ message: "E-Mail erfolgreich verifiziert." }, { status: 200 });
+    return NextResponse.json({ message: "Email successfully verified." }, { status: 200 });
   } catch (error) {
-    console.error("Verifizierungsfehler:", error);
-    return NextResponse.json({ message: "Interner Serverfehler." }, { status: 500 });
+    console.error("Verification error:", error);
+    return NextResponse.json({ message: "Internal server error." }, { status: 500 });
   }
 }

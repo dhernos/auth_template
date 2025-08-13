@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EyeIcon, EyeOffIcon } from "@/components/ui/eye_icon";
 
-// Diese Funktion bewertet die Stärke eines Passworts
+// This function evaluates the strength of a password
 const validatePassword = (password: string) => {
   let strength = 0;
   if (password.length > 7) strength += 1;
@@ -33,7 +33,7 @@ export default function ResetPasswordPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Aktualisiert die Passwortstärke, wenn sich das Passwort ändert
+  // Updates the password strength when the password changes
   useEffect(() => {
     setPasswordStrength(validatePassword(password));
   }, [password]);
@@ -45,19 +45,19 @@ export default function ResetPasswordPage() {
     setLoading(true);
 
     if (!token) {
-      setError("Ungültiger oder fehlender Token.");
+      setError("Invalid or missing token.");
       setLoading(false);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwörter stimmen nicht überein.");
+      setError("Passwords do not match.");
       setLoading(false);
       return;
     }
 
     if (passwordStrength < 5) {
-      setError("Das Passwort ist zu schwach. Es muss Großbuchstaben, Kleinbuchstaben, Zahlen und Sonderzeichen enthalten und mindestens 8 Zeichen lang sein.");
+      setError("The password is too weak. It must contain uppercase letters, lowercase letters, numbers, and special characters, and be at least 8 characters long.");
       setLoading(false);
       return;
     }
@@ -111,16 +111,16 @@ export default function ResetPasswordPage() {
     <div className="flex min-h-screen items-center justify-center">
       <Card className="w-full max-w-md p-4 shadow-lg rounded-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Passwort zurücksetzen</CardTitle>
+          <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
           <CardDescription>
-            Gib dein neues Passwort ein
+            Enter your new password
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="password" className="mb-2 block text-sm font-bold">
-                Neues Passwort:
+                New Password:
               </label>
               <div className="relative">
                 <Input
@@ -142,15 +142,15 @@ export default function ResetPasswordPage() {
                   type="button"
                 >
                   {showNewPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                  <span className="sr-only">Passwort anzeigen/verbergen</span>
+                  <span className="sr-only">Show/Hide password</span>
                 </Button>
               </div>
               
               {password.length > 0 && (
                 <div className="w-full mt-2">
                   <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span>Passwortstärke</span>
-                    <span>{passwordStrength === 5 ? "Stark" : "Schwach"}</span>
+                    <span>Password Strength</span>
+                    <span>{passwordStrength === 5 ? "Strong" : "Weak"}</span>
                   </div>
                   <div className="w-full h-2 rounded-full overflow-hidden">
                     <div
@@ -163,7 +163,7 @@ export default function ResetPasswordPage() {
             </div>
             <div>
               <label htmlFor="confirmPassword" className="mb-2 block text-sm font-bold">
-                Passwort bestätigen:
+                Confirm Password:
               </label>
               <div className="relative">
                 <Input
@@ -184,14 +184,14 @@ export default function ResetPasswordPage() {
                   type="button"
                 >
                   {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                  <span className="sr-only">Passwort anzeigen/verbergen</span>
+                  <span className="sr-only">Toggle password visibility</span>
                 </Button>
               </div>
             </div>
             {message && <p className="text-center text-green-600">{message}</p>}
             {error && <p className="text-center text-red-500">{error}</p>}
             <Button type="submit" className="w-full cursor-pointer" disabled={loading || !isFormValid}>
-              {loading ? "Zurücksetzen..." : "Passwort zurücksetzen"}
+              {loading ? "Resetting..." : "Reset Password"}
             </Button>
           </form>
         </CardContent>

@@ -28,8 +28,8 @@ export default function LoginPage() {
   
   const signupSuccess = searchParams.get("signupSuccess");
   const verificationSuccess = searchParams.get("verificationSuccess");
-  const initialMessage = signupSuccess ? "Registrierung erfolgreich! Bitte verifiziere deine E-Mail." : 
-                        verificationSuccess ? "E-Mail verifiziert! Du kannst dich jetzt anmelden." : null;
+  const initialMessage = signupSuccess ? "Signup Successful! Please verify your email address." : 
+                        verificationSuccess ? "Email verified! You can sign in now." : null;
   const [successMessage, setSuccessMessage] = useState<string | null>(initialMessage);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,12 +46,12 @@ export default function LoginPage() {
     });
 
     if (result?.error) {
-      // NEUE LOGIK: Bei IP-Sperre eine allgemeine Meldung anzeigen
+      // NEW LOGIC: Show a general message for an IP ban
       if (result.error === "IP_BANNED") {
-        setError("Zu viele fehlgeschlagene Anmeldeversuche. Bitte versuchen Sie es später erneut.");
-        console.warn("Anmeldeversuch von gesperrter IP.");
+        setError("Too many failed login attempts. Please try again later.");
+        console.warn("Login attempted from blocked IP.");
       } else if (result.error === "EMAIL_NOT_VERIFIED") {
-        console.warn("Anmeldeversuch mit nicht verifizierter E-Mail. Leite zur Verifizierungsseite weiter.");
+        console.warn("Login attempt from non-verified email. redirecting...");
         try {
           const response = await fetch("api/resend-verification", {
             method: "POST",
@@ -62,14 +62,14 @@ export default function LoginPage() {
           if (response.ok) {
             router.push(`/verify-email?email=${encodeURIComponent(email)}`);
           } else {
-            setError(data.message || "Fehler beim Senden des neuen Codes. Bitte versuche es später erneut.");
+            setError(data.message || "Error sending the code. Please try again.");
           }
         } catch (err) {
-          setError("Fehler beim Senden des neuen Codes. Bitte versuche es später erneut.");
+          setError("Error sending the code. Please try again.");
         }
       } else {
-        setError("E-Mail oder Passwort ist falsch.");
-        console.error("Login fehlgeschlagen:", result.error);
+        setError("Invalid credentials.");
+        console.error("Login failed:", result.error);
       }
     } else if (result?.ok) {
       router.push(callbackUrl);
@@ -81,13 +81,13 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center">
       <Card className="w-full max-w-md mx-auto p-4 space-y-4 shadow-lg rounded-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Anmelden</CardTitle>
-          <CardDescription>Melde dich bei deinem Konto an</CardDescription>
+          <CardTitle className="text-2xl font-bold">Login</CardTitle>
+          <CardDescription>Log in to your account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <label htmlFor="email" className="mb-2 block text-sm font-bold">E-Mail:</label>
+              <label htmlFor="email" className="mb-2 block text-sm font-bold">Email:</label>
               <Input
                 id="email"
                 type="email"
@@ -101,7 +101,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="mb-6">
-              <label htmlFor="password" className="mb-2 block text-sm font-bold">Passwort:</label>
+              <label htmlFor="password" className="mb-2 block text-sm font-bold">Password:</label>
               <div className="relative">
                 <Input
                   id="password"
@@ -137,7 +137,7 @@ export default function LoginPage() {
                   disabled={loading}
                 />
                 <label htmlFor="rememberMe" className="text-sm cursor-pointer">
-                  Angemeldet bleiben
+                  Remember me
                 </label>
               </div>
               <button
@@ -145,7 +145,7 @@ export default function LoginPage() {
                 onClick={() => setIsForgotPasswordDialogOpen(true)}
                 className="text-sm font-medium text-blue-600 hover:text-blue-500 cursor-pointer"
               >
-                Passwort vergessen?
+                Forgot password?
               </button>
             </div>
             
@@ -157,13 +157,13 @@ export default function LoginPage() {
               className="w-full cursor-pointer"
               disabled={loading}
             >
-              {loading ? "Anmelden..." : "Anmelden"}
+              {loading ? "Logging in..." : "Log in"}
             </Button>
           </form>
           <p className="mt-6 text-center text-sm">
-            Noch kein Konto?{" "}
+            Don't have an account yet?{" "}
             <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-              Jetzt registrieren
+              Register now
             </Link>
           </p>
         </CardContent>

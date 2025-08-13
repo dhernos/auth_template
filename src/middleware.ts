@@ -9,13 +9,13 @@ export default withAuth(
     const token = req.nextauth.token;
     const pathname = req.nextUrl.pathname;
 
-    // 1. Überprüfung des Tokens auf Fehler
+    // 1. Check token for errors
     if (!token || token.error) {
       console.warn(`Middleware: Token error '${token?.error}' detected. Forcing logout.`);
       return NextResponse.redirect(new URL("/logout", req.url));
     }
 
-    // 2. Rollenprüfung und Zugriffsverweigerung
+    // 2. Role check and access denial
     const matchedRoute = protectedRoutes.find(route => pathname.startsWith(route.path));
     if (matchedRoute) {
       const userRole = token.role;

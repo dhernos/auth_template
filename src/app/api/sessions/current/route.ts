@@ -5,15 +5,15 @@ import redis from "@/lib/redis";
 import { protectedRoute } from "@/lib/protected-api";
 import { getToken } from "next-auth/jwt";
 
-// Der Handler empfängt nun die Request, Session und params vom Wrapper
+// The handler now receives the request, session, and params from the wrapper
 const handler = async (
   req: Request,
   params: { id: string }
 ) => {
-  // Wir holen das JWT direkt, um die sessionId zu erhalten
+  // We get the JWT directly to obtain the sessionId
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-  // Überprüfen, ob der Token existiert und eine sessionId enthält
+  // Check if the token exists and contains a sessionId
   if (!token || !token.sessionId) {
     return NextResponse.json(
       { error: "Session ID not found in token." },
@@ -27,7 +27,7 @@ const handler = async (
     const sessionData = await redis.hgetall(`session:${sessionId}`);
     const ttl = await redis.ttl(`session:${sessionId}`);
 
-    // Überprüfen, ob die Session in Redis gefunden wurde
+    // Check if the session was found in Redis
     if (!sessionData || Object.keys(sessionData).length === 0) {
       return NextResponse.json(
         { error: "Session not found in Redis." },
@@ -45,5 +45,5 @@ const handler = async (
   }
 };
 
-// Exportiere den gewrappten Handler
+// Export the wrapped handler
 export const GET = protectedRoute(handler);
