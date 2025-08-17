@@ -3,7 +3,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useEffect } from "react";
 import LoadingPage from '@/components/loading-page'; // A simple loading component
 

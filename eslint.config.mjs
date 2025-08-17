@@ -11,6 +11,24 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              // import Source which should be blocked
+              name: "next/navigation",
+              // forbidden imports
+              importNames: ["useRouter", "redirect", "permanentRedirect", "usePathname"],
+              message: "Please use hooks and functions from 'next-intl'."
+            }
+          ]
+        }
+      ]
+    }
+  }
 ];
 
 export default eslintConfig;
