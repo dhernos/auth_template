@@ -4,9 +4,7 @@ TODO:
 Sessions mit IP-Adresse und User-Agent speichern
 Profile Page mit ändern von Daten zb. Profilbild
 2FA
-Email Verification: Link geht nicht
-SSO
-
+Single Prisma Client/Adapter
 
 api wrapper for api security:
 api routes usage:

@@ -43,6 +43,7 @@ model Account {
   provider          String
   providerAccountId String
   refresh_token     String? // Diese Felder bleiben für OAuth-Anbieter
+  refresh_token_expires_in  Int?  // Diese Felder bleiben für OAuth-Anbieter
   access_token      String? // Diese Felder bleiben für OAuth-Anbieter
   expires_at        Int?    // Diese Felder bleiben für OAuth-Anbieter
   token_type        String?

@@ -2,24 +2,24 @@
 
 import NextAuth, { type SessionStrategy } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GitHubProvider from "next-auth/providers/github";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import type { Adapter } from "next-auth/adapters";
-import type { JWT } from "next-auth/jwt";
 import { randomUUID } from "crypto";
 import redis from "@/lib/redis";
 import { headers } from "next/headers";
+import { db } from "@/lib/db"
 
-const prisma = new PrismaClient();
+const prisma = db
 
-// Function to check the session in Redis
+// Funktion zum Überprüfen der Sitzung in Redis
 async function checkSessionInRedis(sessionId: string) {
   const session = await redis.hgetall(`session:${sessionId}`);
   return session;
 }
 
-// Function to invalidate the session from Redis
+// Funktion zum Widerrufen der Sitzung aus Redis
 async function invalidateSession(sessionId: string) {
   await redis.del(`session:${sessionId}`);
 }
@@ -42,77 +42,55 @@ export const authOptions = {
           throw new Error("Please provide an email and password.");
         }
 
-        // Correct way to get the IP address and User-Agent directly in the async callback
         const userAgent = (await headers()).get("user-agent") || "unknown";
         const forwardedFor = (await headers()).get("x-forwarded-for");
         const ip = forwardedFor ? forwardedFor.split(",")[0].trim() : (await headers()).get("x-real-ip");
 
         if (!ip) {
-            throw new Error("Could not determine IP address.");
+          throw new Error("Could not determine IP address.");
         }
-        
+
         const banKey = `login_ban:${ip}`;
         const loginAttemptsKey = `login_attempts:${ip}`;
 
-        // 1. Check for IP ban
         const isBanned = await redis.exists(banKey);
         if (isBanned) {
-            console.warn(`Login attempt from banned IP: ${ip}`);
-            throw new Error("IP_BANNED"); 
+          console.warn(`Login attempt from banned IP: ${ip}`);
+          throw new Error("IP_BANNED");
         }
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
 
-        // Check for invalid login credentials
         if (!user || !user.password || !(await bcrypt.compare(credentials.password, user.password))) {
-            const attempts = await redis.incr(loginAttemptsKey);
-            if (attempts >= LOGIN_ATTEMPT_LIMIT) {
-                console.warn(`IP ${ip} has ${LOGIN_ATTEMPT_LIMIT} failed attempts. Banning for 1 hour.`);
-                await redis.setex(banKey, LOGIN_BAN_DURATION_SECONDS, "1");
-                await redis.expire(loginAttemptsKey, LOGIN_BAN_DURATION_SECONDS); 
-                throw new Error("IP_BANNED");
-            }
-            if (attempts === 1) {
-                await redis.expire(loginAttemptsKey, 10 * 60); // Timeout after 10 minutes without further attempts
-            }
-            throw new Error("Invalid login credentials.");
+          const attempts = await redis.incr(loginAttemptsKey);
+          if (attempts >= LOGIN_ATTEMPT_LIMIT) {
+            console.warn(`IP ${ip} has ${LOGIN_ATTEMPT_LIMIT} failed attempts. Banning for 1 hour.`);
+            await redis.setex(banKey, LOGIN_BAN_DURATION_SECONDS, "1");
+            await redis.expire(loginAttemptsKey, LOGIN_BAN_DURATION_SECONDS);
+            throw new Error("IP_BANNED");
+          }
+          if (attempts === 1) {
+            await redis.expire(loginAttemptsKey, 10 * 60);
+          }
+          throw new Error("Invalid login credentials.");
         }
 
-        // On successful login: reset the counter for the IP
-        await redis.del(loginAttemptsKey); 
+        await redis.del(loginAttemptsKey);
 
         if (!user.emailVerified) {
           console.error("Login failed: Email is not verified.");
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
-        const sessionId = randomUUID();
-        const now = Date.now();
-        const maxAgeInSeconds = credentials.rememberMe === "true" ? 30 * 24 * 60 * 60 : 7 * 60 * 60;
-        const sessionExpiresAt = now + maxAgeInSeconds * 1000;
-
-        await redis.hmset(`session:${sessionId}`, {
-          userId: user.id,
-          expires: sessionExpiresAt.toString(),
-          loginTime: now.toString(),
-          role: user.role,
-          ipAddress: ip, // Add the IP address
-          userAgent: userAgent, // Add the User-Agent
-        });
-
-        await redis.expire(`session:${sessionId}`, maxAgeInSeconds);
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-          role: user.role,
-          sessionId: sessionId,
-        };
+        // Rückgabe des Benutzerobjekts, NextAuth.js JWT-Callback erstellt die Redis-Sitzung
+        return user;
       },
+    }),
+    GitHubProvider({
+      clientId: process.env.AUTH_GITHUB_ID as string,
+      clientSecret: process.env.AUTH_GITHUB_SECRET as string,
     }),
   ],
   session: {
@@ -120,31 +98,46 @@ export const authOptions = {
     maxAge: 7 * 24 * 60 * 60,
   },
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
-      if (token.error) {
-        return token;
-      }
-      
+    async jwt({ token, user, trigger }) {
+      // WICHTIG: Erzeuge und speichere die Redis-Sitzung nur, wenn der Benutzer neu angemeldet wurde
       if (user) {
+        const sessionId = randomUUID();
+        const now = Date.now();
+        const maxAgeInSeconds = 7 * 24 * 60 * 60; // Einheitliche Lebensdauer für alle Provider
+        const sessionExpiresAt = now + maxAgeInSeconds * 1000;
+
+        await redis.hmset(`session:${sessionId}`, {
+          userId: user.id,
+          expires: sessionExpiresAt.toString(),
+          loginTime: now.toString(),
+          role: user.role,
+          // Hinweis: IP und User-Agent sind im JWT-Callback nicht einfach verfügbar
+          // Du kannst sie bei Bedarf im Credentials-Provider setzen oder weglassen
+        });
+
+        await redis.expire(`session:${sessionId}`, maxAgeInSeconds);
+
+        token.sessionId = sessionId;
         token.id = user.id;
         token.role = user.role;
-        token.sessionId = (user as any).sessionId;
+        token.exp = Math.floor(sessionExpiresAt / 1000);
       }
 
+      // Überprüfe die Gültigkeit der Redis-Sitzung bei jedem Request
       if (token.sessionId) {
         const sessionData = await checkSessionInRedis(token.sessionId as string);
-
         if (sessionData && sessionData.userId === token.id) {
-          token.id = sessionData.userId;
-          token.role = sessionData.role;
+          // Token ist gültig, aktualisiere die Daten falls nötig
           token.exp = Math.floor(parseInt(sessionData.expires) / 1000);
           return token;
         } else {
+          // Sitzung in Redis wurde gelöscht, invalider Token
           console.warn("JWT callback: Session not found or mismatched in Redis. Invalidating token.");
           return { ...token, error: "InvalidSessionError" as const };
         }
       }
 
+      // Falls das Token aus einem unbekannten Grund keine sessionId hat
       return { ...token, error: "InvalidSessionError" as const };
     },
 
@@ -157,7 +150,7 @@ export const authOptions = {
           error: token.error as string,
         };
       }
-      
+
       if (token?.id) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;

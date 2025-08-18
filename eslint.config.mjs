@@ -23,6 +23,13 @@ const eslintConfig = [
               // forbidden imports
               importNames: ["useRouter", "redirect", "permanentRedirect", "usePathname"],
               message: "Please use hooks and functions from 'next-intl'."
+            },
+            {
+              // import Source which should be blocked
+              name: "prisma/client",
+              // forbidden imports
+              importNames: ["PrismaClient"],
+              message: "Please use db import."
             }
           ]
         }

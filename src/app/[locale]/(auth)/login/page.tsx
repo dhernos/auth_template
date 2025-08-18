@@ -10,7 +10,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, Github } from "lucide-react";
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
 
 export default function LoginPage() {
@@ -26,11 +26,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const [isForgotPasswordDialogOpen, setIsForgotPasswordDialogOpen] = useState(false);
-  
+
   const signupSuccess = searchParams.get("signupSuccess");
   const verificationSuccess = searchParams.get("verificationSuccess");
-  const initialMessage = signupSuccess ? "Signup Successful! Please verify your email address." : 
-                        verificationSuccess ? "Email verified! You can sign in now." : null;
+  const initialMessage = signupSuccess ? "Signup Successful! Please verify your email address." :
+    verificationSuccess ? "Email verified! You can sign in now." : null;
   const [successMessage, setSuccessMessage] = useState<string | null>(initialMessage);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,14 +47,13 @@ export default function LoginPage() {
     });
 
     if (result?.error) {
-      // NEW LOGIC: Show a general message for an IP ban
       if (result.error === "IP_BANNED") {
         setError("Too many failed login attempts. Please try again later.");
         console.warn("Login attempted from blocked IP.");
       } else if (result.error === "EMAIL_NOT_VERIFIED") {
         console.warn("Login attempt from non-verified email. redirecting...");
         try {
-          const response = await fetch("api/resend-verification", {
+          const response = await fetch("/api/resend-verification", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: email }),
@@ -76,6 +75,11 @@ export default function LoginPage() {
       router.push(callbackUrl);
     }
     setLoading(false);
+  };
+
+  const handleOAuthSignIn = async (provider: string) => {
+    setLoading(true);
+    await signIn(provider, { callbackUrl });
   };
 
   return (
@@ -149,10 +153,10 @@ export default function LoginPage() {
                 Forgot password?
               </button>
             </div>
-            
+
             {error && <p className="mb-4 text-center text-red-500">{error}</p>}
             {successMessage && <p className="mb-4 text-center text-green-600">{successMessage}</p>}
-            
+
             <Button
               type="submit"
               className="w-full cursor-pointer"
@@ -161,6 +165,28 @@ export default function LoginPage() {
               {loading ? "Logging in..." : "Log in"}
             </Button>
           </form>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => handleOAuthSignIn("github")}
+              disabled={loading}
+            >
+              <Github className="mr-2 h-4 w-4" />
+              GitHub
+            </Button>
+          </div>
+
           <p className="mt-6 text-center text-sm">
             Don't have an account yet?{" "}
             <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
@@ -169,7 +195,7 @@ export default function LoginPage() {
           </p>
         </CardContent>
       </Card>
-      
+
       <ForgotPasswordDialog
         isOpen={isForgotPasswordDialogOpen}
         onClose={() => setIsForgotPasswordDialogOpen(false)}

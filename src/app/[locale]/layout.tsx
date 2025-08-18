@@ -1,29 +1,56 @@
-// src/app/layout.tsx
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "@/app/[locale]/globals.css";
+import { NextIntlClientProvider, hasLocale } from "next-intl";
+import { notFound } from "next/navigation";
+import { routing } from "@/i18n/routing";
+import { Providers } from "@/components/providers"
 
-import "./globals.css"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import { Providers } from "./providers"
 
-const inter = Inter({ subsets: ["latin"] })
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
 
-export const metadata: Metadata = {
-  title: "NextAuth.js Template",
-  description: "Next.js template with NextAuth.js, App Router, Prisma and JWT.",
-}
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
-export default function RootLayout({
+const metadata: Metadata = {
+  title: "Auth Template",
+  description: "Auth App",
+  icons: "/logo.svg",
+};
+
+export default async function RootLayout({
   children,
+  params,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
 }) {
+  // Ensure that the incoming `locale` is valid
+  const { locale } = await params;
+  if (!hasLocale(routing.locales, locale)) {
+    notFound();
+  }
+
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <Providers>
-          {children}
-        </Providers>
+    <html lang={locale} suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <NextIntlClientProvider>
+          <Providers>
+            <main className="min-h-screen">
+              <div className=" p-8 rounded-lg shadow-md w-full">{children}</div>
+            </main>
+          </Providers>
+        </NextIntlClientProvider>
       </body>
     </html>
-  )
+  );
 }
+
+export { metadata };
